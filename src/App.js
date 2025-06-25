@@ -504,7 +504,7 @@ const App = () => {
       setLoading(true);
       setError(null);
       
-      const response = await fetch('http://localhost:5000/api/weather/eldoret');
+      const response = await fetch('https://smartagro-p0qf.onrender.com/api/weather/eldoret'); 
       
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
