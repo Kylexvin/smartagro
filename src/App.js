@@ -504,10 +504,23 @@ const App = () => {
       setLoading(true);
       setError(null);
       
-      const response = await fetch('https://smartagro-p0qf.onrender.com/api/weather/eldoret'); 
+      // Enhanced fetch with better error handling and CORS headers
+      const response = await fetch('https://smartagro-p0qf.onrender.com/api/weather/eldoret', {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+          // Add origin header for CORS
+          'Origin': window.location.origin
+        },
+        // Add mode and credentials for CORS handling
+        mode: 'cors',
+        credentials: 'omit'
+      }); 
       
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        const errorText = await response.text();
+        throw new Error(`HTTP ${response.status}: ${errorText || response.statusText}`);
       }
       
       const data = await response.json();
@@ -515,11 +528,27 @@ const App = () => {
       if (data.status === 'success') {
         setWeatherData(data);
       } else {
-        throw new Error('API returned error status');
+        throw new Error(data.message || 'API returned error status');
       }
     } catch (err) {
       console.error('Error fetching weather data:', err);
-      setError(`Failed to fetch weather data: ${err.message}`);
+      
+      // More detailed error messages
+      let errorMessage = 'Failed to fetch weather data';
+      
+      if (err.name === 'TypeError' && err.message.includes('fetch')) {
+        errorMessage = 'Network error - Please check your internet connection';
+      } else if (err.message.includes('CORS')) {
+        errorMessage = 'CORS error - API server configuration issue';
+      } else if (err.message.includes('404')) {
+        errorMessage = 'API endpoint not found';
+      } else if (err.message.includes('500')) {
+        errorMessage = 'Server error - Please try again later';
+      } else {
+        errorMessage = err.message;
+      }
+      
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -560,19 +589,24 @@ const App = () => {
     return (
       <div className="min-h-screen bg-black text-red-400 flex items-center justify-center relative overflow-hidden">
         <AnimatedBackground />
-        <HoloBorder glowColor="red" className="z-10">
+        <HoloBorder glowColor="red" className="z-10 max-w-md w-full mx-4">
           <div className="p-8 text-center">
             <AlertTriangle className="w-16 h-16 text-red-400 mx-auto mb-4 animate-pulse" />
             <h2 className="text-2xl font-bold font-mono mb-4 tracking-wider">
               SYSTEM FAILURE
             </h2>
-            <p className="text-red-300/80 mb-6 font-mono">{error}</p>
-            <button 
-              onClick={fetchWeatherData} 
-              className="bg-gradient-to-r from-red-600 to-red-700 text-white px-6 py-3 rounded font-mono tracking-wider hover:from-red-500 hover:to-red-600 transition-all duration-300 border border-red-500/50"
-            >
-              RESTART PROTOCOL
-            </button>
+            <p className="text-red-300/80 mb-6 font-mono text-sm">{error}</p>
+            <div className="space-y-4">
+              <button 
+                onClick={fetchWeatherData} 
+                className="w-full bg-gradient-to-r from-red-600 to-red-700 text-white px-6 py-3 rounded font-mono tracking-wider hover:from-red-500 hover:to-red-600 transition-all duration-300 border border-red-500/50"
+              >
+                RESTART PROTOCOL
+              </button>
+              <div className="text-xs text-red-400/60 font-mono">
+                If error persists, check API server status
+              </div>
+            </div>
           </div>
         </HoloBorder>
       </div>
